@@ -57,7 +57,7 @@ const raw=[
 const shuffle=a=>[...a].sort(()=>Math.random()-.5);
 let sb=null,channel=null,code="",host=false,mode="solo",pid=crypto.randomUUID(),pname="Player",qs=[],idx=0,score=0,correct=0,tick=null,secs=15,locked=false;
 function msg(s){$("homeMsg").textContent=s}
-function show(id){["home","roomLobby","arena","finish"].forEach(x=>$(x).hidden=x!==id)}
+function show(id){["home","roomLobby","arena","finish","miniGamePanel"].forEach(x=>{const e=$(x);if(e)e.hidden=x!==id})}
 function setQuestions(){qs=shuffle(raw).slice(0,10).map(q=>({category:q[0],question:q[1],answer:q[2],options:shuffle([q[2],...q[3]]),difficulty:q[4]}));idx=0;score=0;correct=0;round()}
 function round(){clearInterval(tick);locked=false; if(mode==="online"){$("roomCodeBadge").hidden=false;$("visibleRoomCode").textContent=code;$("modeLabel").textContent=host?"HOST BATTLE":"FRIEND BATTLE"}else{$("roomCodeBadge").hidden=true;$("modeLabel").textContent="SOLO RUN"}secs=15;let q=qs[idx];$("roundNum").textContent=idx+1;$("timer").textContent=secs;$("category").textContent=q.category;$("questionCount").textContent="QUESTION "+(idx+1)+"/10";$("questionText").textContent=q.question;$("score").textContent=score;$("feedback").textContent="Choose wisely.";$("progressBar").style.width=(idx/10*100)+"%";$("nextBtn").hidden=true;let root=$("answers");root.replaceChildren();q.options.forEach((v,i)=>{let b=document.createElement("button");b.className="answer-option";let span=document.createElement("span");span.className="letter";span.textContent=String.fromCharCode(65+i);b.append(span,document.createTextNode(v));b.onclick=()=>answer(v,b);root.append(b)});show("arena");tick=setInterval(()=>{secs--;$("timer").textContent=secs;if(secs<=0)answer(null,null)},1000);if(mode==="online"&&host)send({type:"question",idx,q:{category:q.category,question:q.question,options:q.options,answer:q.answer}})}
 function answer(v,b){if(locked)return;locked=true;clearInterval(tick);let q=qs[idx],ok=v===q.answer;if(ok){let points=100+secs*10;score+=points;correct++;$("feedback").textContent="⚡ Correct! +"+points}else $("feedback").textContent=v===null?"⏱ Time! Answer: "+q.answer:"Not quite! Answer: "+q.answer;[...$("answers").children].forEach(x=>{x.disabled=true;let text=x.textContent.slice(1).trim();if(text===q.answer)x.classList.add("correct");else if(x===b)x.classList.add("wrong")});$("score").textContent=score;$("progressBar").style.width=((idx+1)/10*100)+"%";$("nextBtn").hidden=false;$("nextBtn").textContent=idx===9?"See results →":"Next question →";if(mode==="online")send({type:"answer",pid,name:pname,score,correct,idx})}
@@ -79,3 +79,39 @@ $("copyRoomCode").onclick=async()=>{try{await navigator.clipboard.writeText(code
 $("leaveRoomBtn").onclick=()=>{if(channel&&sb)sb.removeChannel(channel);channel=null;mode="solo";host=false;code="";show("home");msg("You left the room.")};
 $("nextBtn").onclick=next;$("againBtn").onclick=()=>{mode="solo";if(channel){sb.removeChannel(channel);channel=null}setQuestions()};
 if(isSupabaseConfigured()&&!keyLooksSecret())sb=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);else{$("createBtn").disabled=true;$("joinBtn").disabled=true;msg("Online mode needs Supabase configured. Solo quiz is ready.")}
+
+// ---- Quick solo mini-games (Quiz Battle multiplayer controls are hidden; Tic-Tac-Toe multiplayer remains on index.html) ----
+const miniContent=$("miniGameContent");
+let miniSecret=0, miniTries=0, miniStart=0, miniTimer=null, miniSequence=[], miniInput=[], miniRound=0, miniLocked=false;
+function miniBase(title,status){clearTimeout(miniTimer);$("miniGameTitle").textContent=title;$("miniGameStatus").textContent=status;miniContent.replaceChildren();show("miniGamePanel")}
+function miniButton(label,action,cls="btn btn-secondary"){const b=document.createElement("button");b.className=cls;b.type="button";b.textContent=label;b.addEventListener("click",action);return b}
+function startMini(type){
+ if(type==="reaction"){
+  miniBase("Reaction Test","Wait for the green signal, then tap as quickly as possible.");
+  const target=miniButton("Wait for green…",()=>{}, "reaction-target");target.disabled=true;miniContent.append(target);
+  miniTimer=setTimeout(()=>{target.disabled=false;target.textContent="TAP NOW!";target.dataset.ready="yes";target.classList.add("ready");miniStart=performance.now();target.onclick=()=>{if(target.dataset.ready!=="yes")return;target.dataset.ready="no";const ms=Math.round(performance.now()-miniStart);target.textContent=ms+" ms";$("miniGameStatus").textContent=ms<250?"Lightning fast!":ms<400?"Nice reflexes!":"Try again to beat your time.";miniContent.append(miniButton("Try again",()=>startMini("reaction"),"btn btn-primary"))}},1200+Math.random()*2500);
+  target.onclick=()=>{if(!target.disabled&&target.dataset.ready!=="yes"){$("miniGameStatus").textContent="Too early! Try again.";clearTimeout(miniTimer);miniContent.append(miniButton("Retry",()=>startMini("reaction"),"btn btn-primary"))}};
+ }else if(type==="number"){
+  miniSecret=1+Math.floor(Math.random()*100);miniTries=0;miniBase("Number Guess","I picked a number from 1 to 100. Find it in as few tries as possible.");
+  const input=document.createElement("input");input.type="number";input.min="1";input.max="100";input.placeholder="Enter 1–100";input.className="quiz-input";
+  const result=document.createElement("p");result.className="quiz-message";
+  const guess=miniButton("Guess",()=>{const n=Number(input.value);if(!Number.isInteger(n)||n<1||n>100){result.textContent="Enter a whole number from 1 to 100.";return}miniTries++;if(n===miniSecret){result.textContent="You got it in "+miniTries+" tries!";$("miniGameStatus").textContent="Winner!";guess.disabled=true}else result.textContent=n<miniSecret?"Too low — try higher.":"Too high — try lower.";input.value="";input.focus() },"btn btn-primary");
+  miniContent.append(input,guess,result,miniButton("New number",()=>startMini("number")));
+ }else if(type==="rps"){
+  miniBase("Rock Paper Scissors","Choose one. First to beat the computer wins this round.");
+  const result=document.createElement("p");result.className="quiz-message";let wins=0,losses=0;
+  const update=choice=>{const options=["Rock","Paper","Scissors"],bot=options[Math.floor(Math.random()*3)];let outcome=choice===bot?"Draw!":(choice==="Rock"&&bot==="Scissors"||choice==="Paper"&&bot==="Rock"||choice==="Scissors"&&bot==="Paper")?"You win!":"Computer wins!";if(outcome==="You win!")wins++;if(outcome==="Computer wins!")losses++;result.textContent="You: "+choice+" · Computer: "+bot+" — "+outcome+" (You "+wins+" : "+losses+")"};
+  const row=document.createElement("div");row.className="mini-choice-row";["Rock ✊","Paper ✋","Scissors ✌️"].forEach(label=>row.append(miniButton(label,()=>update(label.split(" ")[0]))));miniContent.append(row,result,miniButton("Reset score",()=>startMini("rps")));
+ }else if(type==="memory"){
+  miniRound=0;miniSequence=[];miniInput=[];miniLocked=false;miniBase("Memory Lights","Watch the sequence, then repeat it in the same order.");
+  const board=document.createElement("div");board.className="memory-board";
+  const status=document.createElement("p");status.className="quiz-message";
+  const colors=["CYAN","PINK","LIME","GOLD"];
+  const paint=()=>{board.replaceChildren();colors.forEach((c,i)=>{const b=miniButton(c,()=>pick(i),"memory-tile tile-"+i);b.disabled=miniLocked;board.append(b)})};
+  const pick=i=>{if(miniLocked)return;miniInput.push(i);if(miniInput[miniInput.length-1]!==miniSequence[miniInput.length-1]){miniLocked=true;status.textContent="Not quite — you reached level "+miniRound+".";miniContent.append(miniButton("Play again",()=>startMini("memory"),"btn btn-primary"));return}if(miniInput.length===miniSequence.length){miniRound++;status.textContent="Great! Level "+miniRound+" — next sequence…";miniLocked=true;miniTimer=setTimeout(nextSeq,650)}};
+  const nextSeq=()=>{miniSequence.push(Math.floor(Math.random()*4));miniInput=[];miniLocked=true;paint();let k=0;const flash=()=>{if(k>=miniSequence.length){miniLocked=false;paint();status.textContent="Your turn — repeat "+miniSequence.length+" lights.";return}const tile=board.children[miniSequence[k]];tile.classList.add("flash");miniTimer=setTimeout(()=>{tile.classList.remove("flash");k++;miniTimer=setTimeout(flash,180)},380)};flash()};
+  miniContent.append(board,status);nextSeq();
+ }
+}
+document.querySelectorAll("[data-mini]").forEach(b=>b.addEventListener("click",()=>startMini(b.dataset.mini)));
+$("miniGameBack").addEventListener("click",()=>{clearTimeout(miniTimer);show("home")});
