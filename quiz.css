@@ -7,3 +7,6 @@
 
 /* Responsive arcade upgrade controls */
 .arcade-toolbar{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin:12px 0}.arcade-difficulty{max-width:180px;min-height:44px}.arcade-key{touch-action:none;user-select:none;min-width:58px;min-height:48px}.arcade-canvas{width:100%;height:auto;touch-action:none}.arcade-controls{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:12px 0}.arcade-toolbar button{min-height:44px}@media(max-width:520px){.arcade-controls{gap:6px}.arcade-key{flex:1 1 26%;padding:12px 8px}.arcade-toolbar>*{flex:1 1 40%}}
+
+/* Responsive arcade upgrade controls */
+.arcade-toolbar{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin:12px 0}.arcade-difficulty{max-width:180px;min-height:44px}.arcade-key{touch-action:none;user-select:none;min-width:58px;min-height:48px}.arcade-canvas{width:100%;height:auto;touch-action:none}.arcade-controls{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:12px 0}.arcade-toolbar button{min-height:44px}@media(max-width:520px){.arcade-controls{gap:6px}.arcade-key{flex:1 1 26%;padding:12px 8px}.arcade-toolbar>*{flex:1 1 40%}}
