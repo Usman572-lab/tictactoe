@@ -87,23 +87,23 @@ function miniBase(title,status){clearTimeout(miniTimer);$("miniGameTitle").textC
 function miniButton(label,action,cls="btn btn-secondary"){const b=document.createElement("button");b.className=cls;b.type="button";b.textContent=label;b.addEventListener("click",action);return b}
 function startMini(type){
  if(type==="reaction"){
-  miniBase("Reaction Test","Wait for the green signal, then tap as quickly as possible.");
+  miniBase("SNAP REFLEX","Wait for the green signal, then tap as quickly as possible.");
   const target=miniButton("Wait for green…",()=>{}, "reaction-target");target.disabled=true;miniContent.append(target);
   miniTimer=setTimeout(()=>{target.disabled=false;target.textContent="TAP NOW!";target.dataset.ready="yes";target.classList.add("ready");miniStart=performance.now();target.onclick=()=>{if(target.dataset.ready!=="yes")return;target.dataset.ready="no";const ms=Math.round(performance.now()-miniStart);target.textContent=ms+" ms";$("miniGameStatus").textContent=ms<250?"Lightning fast!":ms<400?"Nice reflexes!":"Try again to beat your time.";miniContent.append(miniButton("Try again",()=>startMini("reaction"),"btn btn-primary"))}},1200+Math.random()*2500);
   target.onclick=()=>{if(!target.disabled&&target.dataset.ready!=="yes"){$("miniGameStatus").textContent="Too early! Try again.";clearTimeout(miniTimer);miniContent.append(miniButton("Retry",()=>startMini("reaction"),"btn btn-primary"))}};
  }else if(type==="number"){
-  miniSecret=1+Math.floor(Math.random()*100);miniTries=0;miniBase("Number Guess","I picked a number from 1 to 100. Find it in as few tries as possible.");
+  miniSecret=1+Math.floor(Math.random()*100);miniTries=0;miniBase("CODE CRACKER","I picked a number from 1 to 100. Find it in as few tries as possible.");
   const input=document.createElement("input");input.type="number";input.min="1";input.max="100";input.placeholder="Enter 1–100";input.className="quiz-input";
   const result=document.createElement("p");result.className="quiz-message";
   const guess=miniButton("Guess",()=>{const n=Number(input.value);if(!Number.isInteger(n)||n<1||n>100){result.textContent="Enter a whole number from 1 to 100.";return}miniTries++;if(n===miniSecret){result.textContent="You got it in "+miniTries+" tries!";$("miniGameStatus").textContent="Winner!";guess.disabled=true}else result.textContent=n<miniSecret?"Too low — try higher.":"Too high — try lower.";input.value="";input.focus() },"btn btn-primary");
   miniContent.append(input,guess,result,miniButton("New number",()=>startMini("number")));
  }else if(type==="rps"){
-  miniBase("Rock Paper Scissors","Choose one. First to beat the computer wins this round.");
+  miniBase("HANDS OF CHAOS","Choose one. First to beat the computer wins this round.");
   const result=document.createElement("p");result.className="quiz-message";let wins=0,losses=0;
   const update=choice=>{const options=["Rock","Paper","Scissors"],bot=options[Math.floor(Math.random()*3)];let outcome=choice===bot?"Draw!":(choice==="Rock"&&bot==="Scissors"||choice==="Paper"&&bot==="Rock"||choice==="Scissors"&&bot==="Paper")?"You win!":"Computer wins!";if(outcome==="You win!")wins++;if(outcome==="Computer wins!")losses++;result.textContent="You: "+choice+" · Computer: "+bot+" — "+outcome+" (You "+wins+" : "+losses+")"};
   const row=document.createElement("div");row.className="mini-choice-row";["Rock ✊","Paper ✋","Scissors ✌️"].forEach(label=>row.append(miniButton(label,()=>update(label.split(" ")[0]))));miniContent.append(row,result,miniButton("Reset score",()=>startMini("rps")));
  }else if(type==="memory"){
-  miniRound=0;miniSequence=[];miniInput=[];miniLocked=false;miniBase("Memory Lights","Watch the sequence, then repeat it in the same order.");
+  miniRound=0;miniSequence=[];miniInput=[];miniLocked=false;miniBase("ECHO MEMORY","Watch the sequence, then repeat it in the same order.");
   const board=document.createElement("div");board.className="memory-board";
   const status=document.createElement("p");status.className="quiz-message";
   const colors=["CYAN","PINK","LIME","GOLD"];
@@ -117,11 +117,11 @@ document.querySelectorAll("[data-mini]").forEach(b=>b.addEventListener("click",(
 $("miniGameBack").addEventListener("click",()=>{clearTimeout(miniTimer);show("home")});
 
 
-// Arcade mini-games: Space Shooter, Neon Runner, Brick Breaker, Zombie Survival
+// Arcade Worlds: VOID STRIKER, NEON RUSH, BRICK HAVOC, UNDEAD OUTLAST
 let arcadeLoop=0, arcadeKeys={}, arcadeState=null;
 function startArcade(type){
  clearInterval(miniTimer);cancelAnimationFrame(arcadeLoop);arcadeKeys={};
- const titles={shooter:"🚀 Space Shooter",runner:"🏃 Neon Runner",bricks:"🧱 Brick Breaker",zombie:"🧟 Zombie Survival"};
+ const titles={shooter:"🚀 VOID STRIKER",runner:"🏃 NEON RUSH",bricks:"🧱 BRICK HAVOC",zombie:"🧟 UNDEAD OUTLAST"};
  miniBase(titles[type]||"Arcade Game","Use keyboard controls or the on-screen buttons. Beat your high score!");
  const canvas=document.createElement("canvas");canvas.className="arcade-canvas";canvas.width=720;canvas.height=420;canvas.tabIndex=0;canvas.setAttribute("aria-label",titles[type]);miniContent.append(canvas);
  const ctx=canvas.getContext("2d");const controls=document.createElement("div");controls.className="arcade-controls";miniContent.append(controls);
