@@ -134,7 +134,7 @@ function startMini(type){
  if(type==="runner"){make("JUMP / ▲","jump");status.textContent="Press Space or JUMP to hop over blocks."}
  if(type==="bricks"){make("◀","left");make("▶","right");status.textContent="Move the paddle with ← →. Keep the ball alive."}
  if(type==="zombie"){make("◀","left");make("▲","up");make("ATTACK","fire");make("▼","down");make("▶","right");status.textContent="Move with arrows/WASD and press Space to attack."}
- const keydown=e=>{if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","w","a","s","d","W","A","S","D"].includes(e.key)){e.preventDefault();arcadeKeys[e.key==="ArrowLeft"||e.key==="a"||e.key==="A"?"left":e.key==="ArrowRight"||e.key==="d"||e.key==="D"?"right":e.key==="ArrowUp"||e.key==="w"||e.key==="W"?"up":e.key==="ArrowDown"||e.key==="s"||e.key==="S"?"down":"fire"]=true}};
+ const keydown=e=>{if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","w","a","s","d","W","A","S","D"].includes(e.key)){e.preventDefault();arcadeKeys[e.key==="ArrowLeft"||e.key==="a"||e.key==="A"?"left":e.key==="ArrowRight"||e.key==="d"||e.key==="D"?"right":e.key==="ArrowUp"||e.key==="w"||e.key==="W"?"up":e.key==="ArrowDown"||e.key==="s"||e.key==="S"?"down":(type==="runner"?"jump":"fire")]=true}};
  const keyup=e=>{if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","w","a","s","d","W","A","S","D"].includes(e.key)){arcadeKeys[e.key==="ArrowLeft"||e.key==="a"||e.key==="A"?"left":e.key==="ArrowRight"||e.key==="d"||e.key==="D"?"right":e.key==="ArrowUp"||e.key==="w"||e.key==="W"?"up":e.key==="ArrowDown"||e.key==="s"||e.key==="S"?"down":"fire"]=false}};
  canvas.addEventListener("keydown",keydown);window.addEventListener("keydown",keydown);window.addEventListener("keyup",keyup);
  const finish=()=>{over=true;running=false;cancelAnimationFrame(arcadeLoop);status.textContent="Game over! Score: "+state.score;controls.append(miniButton("Play again ↻",()=>{window.removeEventListener("keydown",keydown);window.removeEventListener("keyup",keyup);startMini(type)},"btn btn-primary"))};
@@ -158,7 +158,7 @@ function startMini(type){
    r.obs.forEach(o=>{o.x-=5;ctx.fillStyle="#ff4d8d";ctx.fillRect(o.x,365-o.h,o.w,o.h);if(o.x<p.x+18&&o.x+o.w>p.x-18&&r.y+22>365-o.h){state.lives=0;finish()}});
    r.obs=r.obs.filter(o=>o.x>-40);state.score=Math.floor(frame/5);ctx.fillStyle="#57f7ff";ctx.fillRect(p.x-14,r.y-30,28,30);ctx.fillStyle="#b7ff6a";ctx.fillRect(0,365,720,4);
   }else if(type==="bricks"){
-   if(!state.bricks.length){for(let y=0;y<5;y++)for(let x=0;x<10;x++)state.bricks.push({x:35+x*66,y:55+y*25,alive:true})}
+   if(!state.bricksInit){state.bricksInit=true;for(let y=0;y<5;y++)for(let x=0;x<10;x++)state.bricks.push({x:35+x*66,y:55+y*25,alive:true})}
    if(!state.ball)state.ball={x:360,y:300,vx:3,vy:-4};
    if(arcadeKeys.left)p.x-=6;if(arcadeKeys.right)p.x+=6;p.x=Math.max(45,Math.min(675,p.x));p.y=380;
    const ball=state.ball;ball.x+=ball.vx;ball.y+=ball.vy;if(ball.x<8||ball.x>712)ball.vx*=-1;if(ball.y<38)ball.vy*=-1;
