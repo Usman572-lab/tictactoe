@@ -392,3 +392,11 @@ body {
  .voice-panel { align-items:stretch; }
  .voice-btn { width:100%; }
 }
+
+/* Desktop: keep the room chat beside the game; phones stack it underneath. */
+@media (min-width: 900px) {
+  .game { display:grid; grid-template-columns:minmax(0, 1fr) minmax(280px, 340px); column-gap:26px; align-items:start; }
+  .game > .room-bar { grid-column:1 / -1; }
+  .game > .game-layout { grid-column:1; grid-row:2; }
+  .game > .chat-panel { grid-column:2; grid-row:2; margin-top:0; }
+}
