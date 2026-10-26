@@ -83,6 +83,7 @@ if(isSupabaseConfigured()&&!keyLooksSecret())sb=createClient(SUPABASE_URL,SUPABA
 // ---- Quick solo mini-games (Quiz Battle multiplayer controls are hidden; Tic-Tac-Toe multiplayer remains on index.html) ----
 const miniContent=$("miniGameContent");
 let miniSecret=0, miniTries=0, miniStart=0, miniTimer=null, miniSequence=[], miniInput=[], miniRound=0, miniLocked=false;
+let arcadeCleanup=null;
 function miniBase(title,status){clearTimeout(miniTimer);$("miniGameTitle").textContent=title;$("miniGameStatus").textContent=status;miniContent.replaceChildren();show("miniGamePanel")}
 function miniButton(label,action,cls="btn btn-secondary"){const b=document.createElement("button");b.className=cls;b.type="button";b.textContent=label;b.addEventListener("click",action);return b}
 function startMini(type){
@@ -114,13 +115,15 @@ function startMini(type){
  }
 }
 document.querySelectorAll("[data-mini]").forEach(b=>b.addEventListener("click",()=>{const type=b.dataset.mini;if(["shooter","runner","bricks","zombie"].includes(type))startArcade(type);else startMini(type)}));
-$("miniGameBack").addEventListener("click",()=>{clearTimeout(miniTimer);show("home")});
+$("miniGameBack").addEventListener("click",()=>{clearTimeout(miniTimer);if(arcadeCleanup){arcadeCleanup();arcadeCleanup=null}cancelAnimationFrame(arcadeLoop);arcadeKeys={};show("home")});
 
 
 // Arcade Worlds: VOID STRIKER, NEON RUSH, BRICK HAVOC, UNDEAD OUTLAST
 let arcadeLoop=0, arcadeKeys={}, arcadeState=null;
 function startArcade(type){
- clearInterval(miniTimer);cancelAnimationFrame(arcadeLoop);arcadeKeys={};
+ clearTimeout(miniTimer);
+ if(arcadeCleanup){arcadeCleanup();arcadeCleanup=null}
+ cancelAnimationFrame(arcadeLoop);arcadeKeys={};
  const titles={shooter:"🚀 VOID STRIKER",runner:"🏃 NEON RUSH",bricks:"🧱 BRICK HAVOC",zombie:"🧟 UNDEAD OUTLAST"};
  miniBase(titles[type]||"Arcade Game","Use keyboard controls or the on-screen buttons. Beat your high score!");
  const canvas=document.createElement("canvas");canvas.className="arcade-canvas";canvas.width=720;canvas.height=420;canvas.tabIndex=0;canvas.setAttribute("aria-label",titles[type]);miniContent.append(canvas);
@@ -134,10 +137,21 @@ function startArcade(type){
  if(type==="runner"){make("JUMP / ▲","jump");status.textContent="Press Space or JUMP to hop over blocks."}
  if(type==="bricks"){make("◀","left");make("▶","right");status.textContent="Move the paddle with ← →. Keep the ball alive."}
  if(type==="zombie"){make("◀","left");make("▲","up");make("ATTACK","fire");make("▼","down");make("▶","right");status.textContent="Move with arrows/WASD and press Space to attack."}
- const keydown=e=>{if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","w","a","s","d","W","A","S","D"].includes(e.key)){e.preventDefault();arcadeKeys[e.key==="ArrowLeft"||e.key==="a"||e.key==="A"?"left":e.key==="ArrowRight"||e.key==="d"||e.key==="D"?"right":e.key==="ArrowUp"||e.key==="w"||e.key==="W"?"up":e.key==="ArrowDown"||e.key==="s"||e.key==="S"?"down":(type==="runner"?"jump":"fire")]=true}};
- const keyup=e=>{if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","w","a","s","d","W","A","S","D"].includes(e.key)){arcadeKeys[e.key==="ArrowLeft"||e.key==="a"||e.key==="A"?"left":e.key==="ArrowRight"||e.key==="d"||e.key==="D"?"right":e.key==="ArrowUp"||e.key==="w"||e.key==="W"?"up":e.key==="ArrowDown"||e.key==="s"||e.key==="S"?"down":"fire"]=false}};
- canvas.addEventListener("keydown",keydown);window.addEventListener("keydown",keydown);window.addEventListener("keyup",keyup);
- const finish=()=>{over=true;running=false;cancelAnimationFrame(arcadeLoop);status.textContent="Game over! Score: "+state.score;controls.append(miniButton("Play again ↻",()=>{window.removeEventListener("keydown",keydown);window.removeEventListener("keyup",keyup);startArcade(type)},"btn btn-primary"))};
+ const keyFor=e=>{
+  if(e.key==="ArrowLeft"||e.key.toLowerCase()==="a")return "left";
+  if(e.key==="ArrowRight"||e.key.toLowerCase()==="d")return "right";
+  if(e.key==="ArrowUp"||e.key.toLowerCase()==="w")return "up";
+  if(e.key==="ArrowDown"||e.key.toLowerCase()==="s")return "down";
+  if(e.key===" "||e.key==="Spacebar")return type==="runner"?"jump":"fire";
+  return null;
+ };
+ const keydown=e=>{const key=keyFor(e);if(key){e.preventDefault();arcadeKeys[key]=true}};
+ const keyup=e=>{const key=keyFor(e);if(key){e.preventDefault();arcadeKeys[key]=false}};
+ const blur=()=>{arcadeKeys={}};
+ const cleanup=()=>{running=false;cancelAnimationFrame(arcadeLoop);window.removeEventListener("keydown",keydown);window.removeEventListener("keyup",keyup);window.removeEventListener("blur",blur);canvas.removeEventListener("keydown",keydown);arcadeKeys={}};
+ arcadeCleanup=cleanup;
+ canvas.addEventListener("keydown",keydown);window.addEventListener("keydown",keydown);window.addEventListener("keyup",keyup);window.addEventListener("blur",blur);
+ const finish=()=>{if(over)return;over=true;running=false;cancelAnimationFrame(arcadeLoop);status.textContent="Game over! Score: "+state.score;controls.append(miniButton("Play again ↻",()=>startArcade(type),"btn btn-primary"))};
  function draw(){
   if(!running)return;frame++;ctx.clearRect(0,0,720,420);ctx.fillStyle="#080b19";ctx.fillRect(0,0,720,420);
   for(let i=0;i<55;i++){ctx.fillStyle="#ffffff66";ctx.fillRect((i*97+frame*(i%3+1))%720,(i*61)%420,2,2)}
