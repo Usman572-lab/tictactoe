@@ -217,7 +217,7 @@ export function initRoomChat(supabase, code, uid, playerMark) {
   byId("chatForm")?.addEventListener("submit", sendMessage);
   voiceBtn()?.addEventListener("click", onVoiceClick);
   startMessages();
-  voiceChannel = client.channel("arena:" + roomCode, {
+  voiceChannel = client.channel("arena:" + roomCode + ":voice", {
     config: { private: true, broadcast: { self: false, ack: true } }
   });
   voiceChannel.on("broadcast", { event: "voice-signal" }, ({ payload }) => handleSignal(payload));
