@@ -137,11 +137,20 @@ function makePeer() {
   return peer;
 }
 
+async function initiateOffer() {
+  if (!peer || peer.signalingState !== "stable" || mark !== "X" || !voiceActive) return;
+  const offer = await peer.createOffer();
+  await peer.setLocalDescription(offer);
+  await sendSignal("offer", { description: peer.localDescription });
+}
+
 async function handleSignal(payload) {
   if (!payload || payload.from === userId || !voiceActive) return;
   try {
     const pc = makePeer();
-    if (payload.type === "offer") {
+    if (payload.type === "ready") {
+      if (mark === "X") await initiateOffer();
+    } else if (payload.type === "offer") {
       await pc.setRemoteDescription(payload.description);
       for (const candidate of pendingCandidates.splice(0)) await pc.addIceCandidate(candidate).catch(() => {});
       const answer = await pc.createAnswer();
@@ -176,10 +185,9 @@ async function startVoice() {
     makePeer();
     setVoiceUi("Waiting for opponent…", "🔇 End voice");
     // Both players may start at once; only X initiates to avoid offer collisions.
+    await sendSignal("ready");
     if (mark === "X") {
-      const offer = await peer.createOffer();
-      await peer.setLocalDescription(offer);
-      await sendSignal("offer", { description: peer.localDescription });
+      await initiateOffer();
     } else {
       setVoiceUi("Mic on · waiting for host", "🔇 End voice");
     }
