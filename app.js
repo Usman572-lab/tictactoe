@@ -16,6 +16,7 @@
 // ============================================================================
 
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.1/+esm";
+import { initRoomChat, stopRoomChat } from "./chat.js";
 import {
   SUPABASE_URL,
   SUPABASE_PUBLISHABLE_KEY,
@@ -461,6 +462,7 @@ async function subscribeRoom(code) {
 }
 
 function teardownRoom() {
+  stopRoomChat();
   clearInterval(S.resyncTimer);
   S.resyncTimer = null;
   for (const ch of [S.dbCh, S.presCh]) {
@@ -527,6 +529,7 @@ function enterRoom(row) {
   teardownRoom();
   S.code = row.code;
   S.mark = row.host_id === S.uid ? "X" : "O";
+  initRoomChat(sb, S.code, S.uid, S.mark);
   S.room = null;
   S.present = new Set();
   S.presenceReady = false;
