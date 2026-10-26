@@ -115,3 +115,68 @@ function startMini(type){
 }
 document.querySelectorAll("[data-mini]").forEach(b=>b.addEventListener("click",()=>startMini(b.dataset.mini)));
 $("miniGameBack").addEventListener("click",()=>{clearTimeout(miniTimer);show("home")});
+
+
+// Arcade mini-games: Space Shooter, Neon Runner, Brick Breaker, Zombie Survival
+let arcadeLoop=0, arcadeKeys={}, arcadeState=null;
+function startMini(type){
+ clearInterval(miniTimer);cancelAnimationFrame(arcadeLoop);arcadeKeys={};
+ const titles={shooter:"🚀 Space Shooter",runner:"🏃 Neon Runner",bricks:"🧱 Brick Breaker",zombie:"🧟 Zombie Survival"};
+ miniBase(titles[type]||"Arcade Game","Use keyboard controls or the on-screen buttons. Beat your high score!");
+ const canvas=document.createElement("canvas");canvas.className="arcade-canvas";canvas.width=720;canvas.height=420;canvas.tabIndex=0;canvas.setAttribute("aria-label",titles[type]);miniContent.append(canvas);
+ const ctx=canvas.getContext("2d");const controls=document.createElement("div");controls.className="arcade-controls";miniContent.append(controls);
+ const status=document.createElement("p");status.className="quiz-message";miniContent.append(status);
+ const make=(label,key)=>{const b=miniButton(label,()=>{arcadeKeys[key]=true;setTimeout(()=>arcadeKeys[key]=false,160)},"btn btn-secondary arcade-key");controls.append(b)};
+ let running=true,score=0,frame=0,over=false;
+ const state={type,player:{x:360,y:350,w:26,h:26,vx:0,vy:0},objects:[],bullets:[],bricks:[],score:0,lives:3};
+ arcadeState=state;
+ if(type==="shooter"){make("◀","left");make("FIRE / ▲","fire");make("▶","right");status.textContent="Move with ← → and fire with Space."}
+ if(type==="runner"){make("JUMP / ▲","jump");status.textContent="Press Space or JUMP to hop over blocks."}
+ if(type==="bricks"){make("◀","left");make("▶","right");status.textContent="Move the paddle with ← →. Keep the ball alive."}
+ if(type==="zombie"){make("◀","left");make("▲","up");make("ATTACK","fire");make("▼","down");make("▶","right");status.textContent="Move with arrows/WASD and press Space to attack."}
+ const keydown=e=>{if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","w","a","s","d","W","A","S","D"].includes(e.key)){e.preventDefault();arcadeKeys[e.key==="ArrowLeft"||e.key==="a"||e.key==="A"?"left":e.key==="ArrowRight"||e.key==="d"||e.key==="D"?"right":e.key==="ArrowUp"||e.key==="w"||e.key==="W"?"up":e.key==="ArrowDown"||e.key==="s"||e.key==="S"?"down":"fire"]=true}};
+ const keyup=e=>{if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","w","a","s","d","W","A","S","D"].includes(e.key)){arcadeKeys[e.key==="ArrowLeft"||e.key==="a"||e.key==="A"?"left":e.key==="ArrowRight"||e.key==="d"||e.key==="D"?"right":e.key==="ArrowUp"||e.key==="w"||e.key==="W"?"up":e.key==="ArrowDown"||e.key==="s"||e.key==="S"?"down":"fire"]=false}};
+ canvas.addEventListener("keydown",keydown);window.addEventListener("keydown",keydown);window.addEventListener("keyup",keyup);
+ const finish=()=>{over=true;running=false;cancelAnimationFrame(arcadeLoop);status.textContent="Game over! Score: "+state.score;controls.append(miniButton("Play again ↻",()=>{window.removeEventListener("keydown",keydown);window.removeEventListener("keyup",keyup);startMini(type)},"btn btn-primary"))};
+ function draw(){
+  if(!running)return;frame++;ctx.clearRect(0,0,720,420);ctx.fillStyle="#080b19";ctx.fillRect(0,0,720,420);
+  for(let i=0;i<55;i++){ctx.fillStyle="#ffffff66";ctx.fillRect((i*97+frame*(i%3+1))%720,(i*61)%420,2,2)}
+  ctx.fillStyle="#fff";ctx.font="bold 18px system-ui";ctx.fillText("SCORE "+state.score,18,28);ctx.fillText("LIVES "+state.lives,610,28);
+  const p=state.player;
+  if(type==="shooter"){
+   if(arcadeKeys.left)p.x-=5;if(arcadeKeys.right)p.x+=5;p.x=Math.max(18,Math.min(702,p.x));
+   if(frame%38===0)state.objects.push({x:20+Math.random()*680,y:45,r:14,v:1.4+Math.random()*1.7});
+   if(arcadeKeys.fire&&frame%8===0)state.bullets.push({x:p.x,y:p.y-14});
+   state.bullets.forEach(b=>{b.y-=8;ctx.fillStyle="#57f7ff";ctx.fillRect(b.x-3,b.y,6,14)});
+   state.objects.forEach(o=>{o.y+=o.v;ctx.fillStyle="#ff4d8d";ctx.beginPath();ctx.arc(o.x,o.y,o.r,0,Math.PI*2);ctx.fill()});
+   state.objects=state.objects.filter(o=>{const hit=state.bullets.some(b=>Math.abs(b.x-o.x)<o.r+4&&Math.abs(b.y-o.y)<o.r);if(hit){state.bullets=state.bullets.filter(b=>!(Math.abs(b.x-o.x)<o.r+4&&Math.abs(b.y-o.y)<o.r));state.score+=10;return false}if(o.y>400){state.lives--;if(state.lives<=0)finish();return false}return true});
+   ctx.fillStyle="#57f7ff";ctx.beginPath();ctx.moveTo(p.x,p.y-18);ctx.lineTo(p.x-18,p.y+15);ctx.lineTo(p.x+18,p.y+15);ctx.closePath();ctx.fill();
+  }else if(type==="runner"){
+   if(!state.runner){state.runner={y:330,vy:0,obs:[]};p.x=95}
+   const r=state.runner;if(arcadeKeys.jump&&r.y>=330)r.vy=-13;r.vy+=.55;r.y=Math.min(330,r.y+r.vy);
+   if(frame%58===0)r.obs.push({x:730,w:20+Math.random()*20,h:25+Math.random()*35});
+   r.obs.forEach(o=>{o.x-=5;ctx.fillStyle="#ff4d8d";ctx.fillRect(o.x,365-o.h,o.w,o.h);if(o.x<p.x+18&&o.x+o.w>p.x-18&&r.y+22>365-o.h){state.lives=0;finish()}});
+   r.obs=r.obs.filter(o=>o.x>-40);state.score=Math.floor(frame/5);ctx.fillStyle="#57f7ff";ctx.fillRect(p.x-14,r.y-30,28,30);ctx.fillStyle="#b7ff6a";ctx.fillRect(0,365,720,4);
+  }else if(type==="bricks"){
+   if(!state.bricks.length){for(let y=0;y<5;y++)for(let x=0;x<10;x++)state.bricks.push({x:35+x*66,y:55+y*25,alive:true})}
+   if(!state.ball)state.ball={x:360,y:300,vx:3,vy:-4};
+   if(arcadeKeys.left)p.x-=6;if(arcadeKeys.right)p.x+=6;p.x=Math.max(45,Math.min(675,p.x));p.y=380;
+   const ball=state.ball;ball.x+=ball.vx;ball.y+=ball.vy;if(ball.x<8||ball.x>712)ball.vx*=-1;if(ball.y<38)ball.vy*=-1;
+   if(ball.y>365&&ball.y<395&&Math.abs(ball.x-p.x)<58&&ball.vy>0)ball.vy=-Math.abs(ball.vy);
+   state.bricks.forEach(b=>{if(b.alive&&ball.x>b.x&&ball.x<b.x+58&&ball.y>b.y&&ball.y<b.y+17){b.alive=false;ball.vy*=-1;state.score+=10}});
+   state.bricks.forEach((b,i)=>{if(b.alive){ctx.fillStyle=["#ff4d8d","#57f7ff","#b7ff6a","#ffc857","#a78bfa"][Math.floor(i/10)];ctx.fillRect(b.x,b.y,58,17)}});
+   ctx.fillStyle="#fff";ctx.fillRect(p.x-48,388,96,10);ctx.fillStyle="#57f7ff";ctx.beginPath();ctx.arc(ball.x,ball.y,8,0,Math.PI*2);ctx.fill();
+   if(ball.y>425){state.lives--;if(state.lives<=0)finish();else state.ball={x:360,y:300,vx:3,vy:-4}}
+   if(state.bricks.every(b=>!b.alive)){state.score+=100;status.textContent="Amazing! All bricks cleared — you win!";finish()}
+  }else if(type==="zombie"){
+   if(arcadeKeys.left)p.x-=3;if(arcadeKeys.right)p.x+=3;if(arcadeKeys.up)p.y-=3;if(arcadeKeys.down)p.y+=3;p.x=Math.max(20,Math.min(700,p.x));p.y=Math.max(50,Math.min(400,p.y));
+   if(frame%45===0)state.objects.push({x:Math.random()<.5?5:715,y:55+Math.random()*350,r:12,hp:1});
+   state.objects.forEach(o=>{const dx=p.x-o.x,dy=p.y-o.y,d=Math.hypot(dx,dy)||1;o.x+=dx/d*1.2;o.y+=dy/d*1.2;if(d<25&&frame%35===0)state.lives--});
+   if(arcadeKeys.fire&&frame%12===0){state.objects=state.objects.filter(o=>{if(Math.hypot(p.x-o.x,p.y-o.y)<65){state.score+=10;return false}return true})}
+   state.objects.forEach(o=>{ctx.fillStyle="#9be15d";ctx.beginPath();ctx.arc(o.x,o.y,o.r,0,Math.PI*2);ctx.fill();ctx.fillStyle="#111";ctx.fillRect(o.x-5,o.y-3,3,3);ctx.fillRect(o.x+3,o.y-3,3,3)});
+   ctx.fillStyle="#57f7ff";ctx.beginPath();ctx.arc(p.x,p.y,15,0,Math.PI*2);ctx.fill();if(state.lives<=0)finish();
+  }
+  if(!over){arcadeLoop=requestAnimationFrame(draw)}
+ }
+ draw();canvas.focus();
+}
