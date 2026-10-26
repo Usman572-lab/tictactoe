@@ -84,6 +84,10 @@ if(isSupabaseConfigured()&&!keyLooksSecret())sb=createClient(SUPABASE_URL,SUPABA
 const miniContent=$("miniGameContent");
 let miniSecret=0, miniTries=0, miniStart=0, miniTimer=null, miniSequence=[], miniInput=[], miniRound=0, miniLocked=false;
 let arcadeCleanup=null;
+const arcadeProfileKey="arcadeWorldsProfileV1";
+function getArcadeProfile(){try{return JSON.parse(localStorage.getItem(arcadeProfileKey))||{xp:0,bests:{},achievements:[]}}catch{return {xp:0,bests:{},achievements:[]}}}
+function saveArcadeProfile(profile){try{localStorage.setItem(arcadeProfileKey,JSON.stringify(profile))}catch{}}
+function showArcadeProfile(){const p=getArcadeProfile();return "XP "+p.xp+" · Best "+Math.max(0,...Object.values(p.bests))+" · Achievements "+p.achievements.length+"/6"}
 function miniBase(title,status){clearTimeout(miniTimer);$("miniGameTitle").textContent=title;$("miniGameStatus").textContent=status;miniContent.replaceChildren();show("miniGamePanel")}
 function miniButton(label,action,cls="btn btn-secondary"){const b=document.createElement("button");b.className=cls;b.type="button";b.textContent=label;b.addEventListener("click",action);return b}
 function startMini(type){
@@ -125,11 +129,17 @@ function startArcade(type){
  if(arcadeCleanup){arcadeCleanup();arcadeCleanup=null}
  cancelAnimationFrame(arcadeLoop);arcadeKeys={};
  const titles={shooter:"🚀 VOID STRIKER",runner:"🏃 NEON RUSH",bricks:"🧱 BRICK HAVOC",zombie:"🧟 UNDEAD OUTLAST"};
- miniBase(titles[type]||"Arcade Game","Use keyboard controls or the on-screen buttons. Beat your high score!");
+ miniBase(titles[type]||"Arcade Game","Use keyboard controls or on-screen controls. Beat your high score!");
+ const toolbar=document.createElement("div");toolbar.className="arcade-toolbar";
+ const difficulty=document.createElement("select");difficulty.className="quiz-input arcade-difficulty";difficulty.setAttribute("aria-label","Difficulty");
+ [["easy","Easy"],["normal","Normal"],["hard","Hard"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;difficulty.append(o)});
+ let paused=false;const pauseBtn=miniButton("Ⅱ Pause",()=>{paused=!paused;pauseBtn.textContent=paused?"▶ Resume":"Ⅱ Pause";if(!paused)canvas.focus()},"btn btn-secondary");
+ const profileLine=document.createElement("p");profileLine.className="quiz-message";profileLine.textContent=showArcadeProfile();
+ toolbar.append(difficulty,pauseBtn);miniContent.append(toolbar,profileLine);
  const canvas=document.createElement("canvas");canvas.className="arcade-canvas";canvas.width=720;canvas.height=420;canvas.tabIndex=0;canvas.setAttribute("aria-label",titles[type]);miniContent.append(canvas);
  const ctx=canvas.getContext("2d");const controls=document.createElement("div");controls.className="arcade-controls";miniContent.append(controls);
  const status=document.createElement("p");status.className="quiz-message";miniContent.append(status);
- const make=(label,key)=>{const b=miniButton(label,()=>{arcadeKeys[key]=true;setTimeout(()=>arcadeKeys[key]=false,160)},"btn btn-secondary arcade-key");controls.append(b)};
+ const make=(label,key)=>{const b=miniButton(label,()=>{},"btn btn-secondary arcade-key");const down=e=>{if(e)e.preventDefault();arcadeKeys[key]=true};const up=e=>{if(e)e.preventDefault();arcadeKeys[key]=false};b.addEventListener("pointerdown",down);b.addEventListener("pointerup",up);b.addEventListener("pointerleave",up);b.addEventListener("pointercancel",up);b.addEventListener("contextmenu",e=>e.preventDefault());controls.append(b)};
  let running=true,score=0,frame=0,over=false;
  const state={type,player:{x:360,y:350,w:26,h:26,vx:0,vy:0},objects:[],bullets:[],bricks:[],effects:[],score:0,lives:3};
  arcadeState=state;
@@ -151,15 +161,15 @@ function startArcade(type){
  const cleanup=()=>{running=false;cancelAnimationFrame(arcadeLoop);window.removeEventListener("keydown",keydown);window.removeEventListener("keyup",keyup);window.removeEventListener("blur",blur);canvas.removeEventListener("keydown",keydown);arcadeKeys={}};
  arcadeCleanup=cleanup;
  canvas.addEventListener("keydown",keydown);window.addEventListener("keydown",keydown);window.addEventListener("keyup",keyup);window.addEventListener("blur",blur);
- const finish=(message)=>{if(over)return;over=true;running=false;cancelAnimationFrame(arcadeLoop);status.textContent=message||"Game over! Score: "+state.score;controls.append(miniButton("Play again ↻",()=>startArcade(type),"btn btn-primary"))};
+ const finish=(message)=>{if(over)return;over=true;running=false;cancelAnimationFrame(arcadeLoop);const profile=getArcadeProfile(),oldBest=profile.bests[type]||0;profile.bests[type]=Math.max(oldBest,state.score);const earned=Math.max(5,Math.floor(state.score/5));profile.xp+=earned;const unlock=id=>{if(!profile.achievements.includes(id))profile.achievements.push(id)};if(state.score>=50)unlock("score50");if(state.score>=200)unlock("score200");if(state.score>oldBest)unlock("personalbest");if(type==="zombie"&&state.score>=100)unlock("zombieslayer");if(state.lives>0)unlock("survivor");if(profile.xp>=500)unlock("xp500");saveArcadeProfile(profile);profileLine.textContent=showArcadeProfile()+" · +"+earned+" XP";status.textContent=(message||"Run complete! Score: "+state.score)+" · "+(state.score>oldBest?"NEW HIGH SCORE! ":"")+"+"+earned+" XP";const ach=document.createElement("p");ach.className="quiz-message";ach.textContent="Achievements: "+profile.achievements.length+"/6 — "+profile.achievements.join(", ");miniContent.append(ach);controls.append(miniButton("Play again ↻",()=>startArcade(type),"btn btn-primary"))};
  function draw(){
-  if(!running)return;frame++;ctx.clearRect(0,0,720,420);ctx.fillStyle="#080b19";ctx.fillRect(0,0,720,420);
+  if(!running)return;if(paused){ctx.clearRect(0,0,720,420);ctx.fillStyle="#080b19";ctx.fillRect(0,0,720,420);ctx.fillStyle="#57f7ff";ctx.font="bold 34px system-ui";ctx.textAlign="center";ctx.fillText("PAUSED",360,205);ctx.font="16px system-ui";ctx.fillText("Press Resume to continue",360,240);ctx.textAlign="left";arcadeLoop=requestAnimationFrame(draw);return}frame++;ctx.clearRect(0,0,720,420);ctx.fillStyle="#080b19";ctx.fillRect(0,0,720,420);
   for(let i=0;i<55;i++){ctx.fillStyle="#ffffff66";ctx.fillRect((i*97+frame*(i%3+1))%720,(i*61)%420,2,2)}
   ctx.fillStyle="#fff";ctx.font="bold 18px system-ui";ctx.fillText("SCORE "+state.score,18,28);ctx.fillText("LIVES "+state.lives,610,28);
   const p=state.player;
   if(type==="shooter"){
    if(arcadeKeys.left)p.x-=5;if(arcadeKeys.right)p.x+=5;p.x=Math.max(18,Math.min(702,p.x));
-   if(frame%38===0)state.objects.push({x:20+Math.random()*680,y:45,r:14,v:1.4+Math.random()*1.7});
+   if(frame%(difficulty.value==="easy"?48:difficulty.value==="hard"?27:38)===0)state.objects.push({x:20+Math.random()*680,y:45,r:14,v:1.4+Math.random()*1.7});
    if(arcadeKeys.fire&&frame%8===0)state.bullets.push({x:p.x,y:p.y-14});
    state.bullets.forEach(b=>{b.y-=8;ctx.fillStyle="#57f7ff";ctx.fillRect(b.x-3,b.y,6,14)});
    state.objects.forEach(o=>{o.y+=o.v;ctx.fillStyle="#ff4d8d";ctx.beginPath();ctx.arc(o.x,o.y,o.r,0,Math.PI*2);ctx.fill()});
@@ -168,8 +178,8 @@ function startArcade(type){
   }else if(type==="runner"){
    if(!state.runner){state.runner={y:330,vy:0,obs:[]};p.x=95}
    const r=state.runner;if(arcadeKeys.jump&&r.y>=330)r.vy=-13;r.vy+=.55;r.y=Math.min(330,r.y+r.vy);
-   if(frame%58===0)r.obs.push({x:730,w:20+Math.random()*20,h:25+Math.random()*35});
-   r.obs.forEach(o=>{o.x-=5;ctx.fillStyle="#ff4d8d";ctx.fillRect(o.x,365-o.h,o.w,o.h);if(o.x<p.x+18&&o.x+o.w>p.x-18&&r.y+22>365-o.h){state.lives=0;finish()}});
+   if(frame%(difficulty.value==="easy"?72:difficulty.value==="hard"?43:58)===0)r.obs.push({x:730,w:20+Math.random()*20,h:25+Math.random()*35});
+   r.obs.forEach(o=>{o.x-=difficulty.value==="easy"?4:difficulty.value==="hard"?6.5:5;ctx.fillStyle="#ff4d8d";ctx.fillRect(o.x,365-o.h,o.w,o.h);if(o.x<p.x+18&&o.x+o.w>p.x-18&&r.y+22>365-o.h){state.lives=0;finish()}});
    r.obs=r.obs.filter(o=>o.x>-40);state.score=Math.floor(frame/5);ctx.fillStyle="#57f7ff";ctx.fillRect(p.x-14,r.y-30,28,30);ctx.fillStyle="#b7ff6a";ctx.fillRect(0,365,720,4);
   }else if(type==="bricks"){
    if(!state.bricksInit){state.bricksInit=true;for(let y=0;y<5;y++)for(let x=0;x<10;x++)state.bricks.push({x:35+x*66,y:55+y*25,alive:true})}
@@ -185,7 +195,7 @@ function startArcade(type){
   }else if(type==="zombie"){
    if(arcadeKeys.left)p.x-=3;if(arcadeKeys.right)p.x+=3;if(arcadeKeys.up)p.y-=3;if(arcadeKeys.down)p.y+=3;p.x=Math.max(20,Math.min(700,p.x));p.y=Math.max(50,Math.min(400,p.y));
    if(frame%45===0)state.objects.push({x:Math.random()<.5?5:715,y:55+Math.random()*350,r:12,hp:1});
-   state.objects.forEach(o=>{const dx=p.x-o.x,dy=p.y-o.y,d=Math.hypot(dx,dy)||1;o.x+=dx/d*1.2;o.y+=dy/d*1.2});
+   state.objects.forEach(o=>{const dx=p.x-o.x,dy=p.y-o.y,d=Math.hypot(dx,dy)||1;o.x+=dx/d*(difficulty.value==="easy"?.9:difficulty.value==="hard"?1.7:1.2);o.y+=dy/d*(difficulty.value==="easy"?.9:difficulty.value==="hard"?1.7:1.2)});
    if(state.objects.some(o=>Math.hypot(p.x-o.x,p.y-o.y)<25)&&frame%35===0)state.lives--;
    if(arcadeKeys.fire&&frame%12===0){
     state.effects.push({kind:"slash",x:p.x,y:p.y,life:10});
