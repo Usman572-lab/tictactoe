@@ -131,7 +131,7 @@ function startArcade(type){
  const status=document.createElement("p");status.className="quiz-message";miniContent.append(status);
  const make=(label,key)=>{const b=miniButton(label,()=>{arcadeKeys[key]=true;setTimeout(()=>arcadeKeys[key]=false,160)},"btn btn-secondary arcade-key");controls.append(b)};
  let running=true,score=0,frame=0,over=false;
- const state={type,player:{x:360,y:350,w:26,h:26,vx:0,vy:0},objects:[],bullets:[],bricks:[],score:0,lives:3};
+ const state={type,player:{x:360,y:350,w:26,h:26,vx:0,vy:0},objects:[],bullets:[],bricks:[],effects:[],score:0,lives:3};
  arcadeState=state;
  if(type==="shooter"){make("◀","left");make("FIRE / ▲","fire");make("▶","right");status.textContent="Move with ← → and fire with Space."}
  if(type==="runner"){make("JUMP / ▲","jump");status.textContent="Press Space or JUMP to hop over blocks."}
@@ -151,7 +151,7 @@ function startArcade(type){
  const cleanup=()=>{running=false;cancelAnimationFrame(arcadeLoop);window.removeEventListener("keydown",keydown);window.removeEventListener("keyup",keyup);window.removeEventListener("blur",blur);canvas.removeEventListener("keydown",keydown);arcadeKeys={}};
  arcadeCleanup=cleanup;
  canvas.addEventListener("keydown",keydown);window.addEventListener("keydown",keydown);window.addEventListener("keyup",keyup);window.addEventListener("blur",blur);
- const finish=()=>{if(over)return;over=true;running=false;cancelAnimationFrame(arcadeLoop);status.textContent="Game over! Score: "+state.score;controls.append(miniButton("Play again ↻",()=>startArcade(type),"btn btn-primary"))};
+ const finish=(message)=>{if(over)return;over=true;running=false;cancelAnimationFrame(arcadeLoop);status.textContent=message||"Game over! Score: "+state.score;controls.append(miniButton("Play again ↻",()=>startArcade(type),"btn btn-primary"))};
  function draw(){
   if(!running)return;frame++;ctx.clearRect(0,0,720,420);ctx.fillStyle="#080b19";ctx.fillRect(0,0,720,420);
   for(let i=0;i<55;i++){ctx.fillStyle="#ffffff66";ctx.fillRect((i*97+frame*(i%3+1))%720,(i*61)%420,2,2)}
@@ -181,14 +181,25 @@ function startArcade(type){
    state.bricks.forEach((b,i)=>{if(b.alive){ctx.fillStyle=["#ff4d8d","#57f7ff","#b7ff6a","#ffc857","#a78bfa"][Math.floor(i/10)];ctx.fillRect(b.x,b.y,58,17)}});
    ctx.fillStyle="#fff";ctx.fillRect(p.x-48,388,96,10);ctx.fillStyle="#57f7ff";ctx.beginPath();ctx.arc(ball.x,ball.y,8,0,Math.PI*2);ctx.fill();
    if(ball.y>425){state.lives--;if(state.lives<=0)finish();else state.ball={x:360,y:300,vx:3,vy:-4}}
-   if(state.bricks.every(b=>!b.alive)){state.score+=100;status.textContent="Amazing! All bricks cleared — you win!";finish()}
+   if(state.bricks.every(b=>!b.alive)){state.score+=100;finish("You win! All bricks cleared — Score: "+state.score)}
   }else if(type==="zombie"){
    if(arcadeKeys.left)p.x-=3;if(arcadeKeys.right)p.x+=3;if(arcadeKeys.up)p.y-=3;if(arcadeKeys.down)p.y+=3;p.x=Math.max(20,Math.min(700,p.x));p.y=Math.max(50,Math.min(400,p.y));
    if(frame%45===0)state.objects.push({x:Math.random()<.5?5:715,y:55+Math.random()*350,r:12,hp:1});
-   state.objects.forEach(o=>{const dx=p.x-o.x,dy=p.y-o.y,d=Math.hypot(dx,dy)||1;o.x+=dx/d*1.2;o.y+=dy/d*1.2;if(d<25&&frame%35===0)state.lives--});
-   if(arcadeKeys.fire&&frame%12===0){state.objects=state.objects.filter(o=>{if(Math.hypot(p.x-o.x,p.y-o.y)<65){state.score+=10;return false}return true})}
-   state.objects.forEach(o=>{ctx.fillStyle="#9be15d";ctx.beginPath();ctx.arc(o.x,o.y,o.r,0,Math.PI*2);ctx.fill();ctx.fillStyle="#111";ctx.fillRect(o.x-5,o.y-3,3,3);ctx.fillRect(o.x+3,o.y-3,3,3)});
-   ctx.fillStyle="#57f7ff";ctx.beginPath();ctx.arc(p.x,p.y,15,0,Math.PI*2);ctx.fill();if(state.lives<=0)finish();
+   state.objects.forEach(o=>{const dx=p.x-o.x,dy=p.y-o.y,d=Math.hypot(dx,dy)||1;o.x+=dx/d*1.2;o.y+=dy/d*1.2});
+   if(state.objects.some(o=>Math.hypot(p.x-o.x,p.y-o.y)<25)&&frame%35===0)state.lives--;
+   if(arcadeKeys.fire&&frame%12===0){
+    state.effects.push({kind:"slash",x:p.x,y:p.y,life:10});
+    state.objects=state.objects.filter(o=>{
+     if(Math.hypot(p.x-o.x,p.y-o.y)<72){
+      state.score+=10;
+      for(let k=0;k<9;k++){const a=Math.PI*2*k/9;state.effects.push({kind:"particle",x:o.x,y:o.y,vx:Math.cos(a)*(1.5+Math.random()*2),vy:Math.sin(a)*(1.5+Math.random()*2),life:22})}
+      state.effects.push({kind:"pop",x:o.x,y:o.y,life:16});return false
+     }return true
+    })
+   }
+   state.objects.forEach(o=>{ctx.fillStyle="#9be15d";ctx.beginPath();ctx.arc(o.x,o.y,o.r,0,Math.PI*2);ctx.fill();ctx.fillStyle="#111";ctx.fillRect(o.x-5,o.y-3,3,3);ctx.fillRect(o.x+3,o.y-3,3,3);ctx.fillStyle="#ff4d8d";ctx.fillRect(o.x-7,o.y+5,14,3)});
+   state.effects=state.effects.filter(e=>{e.life--;if(e.kind==="slash"){ctx.strokeStyle="#57f7ff";ctx.lineWidth=5;ctx.beginPath();ctx.arc(e.x,e.y,48+(10-e.life)*1.2,-.9,.9);ctx.stroke()}else if(e.kind==="particle"){e.x+=e.vx;e.y+=e.vy;e.vy+=.08;ctx.fillStyle="#b7ff6a";ctx.fillRect(e.x,e.y,5,5)}else{ctx.strokeStyle="#ff4d8d";ctx.lineWidth=3;ctx.beginPath();ctx.arc(e.x,e.y,(16-e.life)*2,0,Math.PI*2);ctx.stroke()}return e.life>0});
+   ctx.fillStyle="#57f7ff";ctx.beginPath();ctx.arc(p.x,p.y,15,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.font="bold 12px system-ui";ctx.fillText("⚔",p.x-5,p.y+4);if(state.lives<=0)finish();
   }
   if(!over){arcadeLoop=requestAnimationFrame(draw)}
  }
