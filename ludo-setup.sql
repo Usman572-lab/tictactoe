@@ -21,7 +21,7 @@ declare c text; newrow public.ludo_rooms;
 begin
  if auth.uid() is null then raise exception 'not_signed_in'; end if;
  for i in 1..10 loop
-   c := upper(substr(encode(gen_random_bytes(8),'hex'),1,6));
+   select string_agg(substr('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', floor(random()*32)::int+1, 1), '') into c from generate_series(1,6);
    begin
      insert into public.ludo_rooms(code,host_id,players,state)
      values(c,auth.uid(),'[]'::jsonb,jsonb_build_object('turn',0,'die',0,'rolled',false,'tokens',jsonb_build_array(
@@ -45,7 +45,7 @@ begin
  if not found then raise exception 'room_not_found'; end if;
  if r.host_id=auth.uid() or exists(select 1 from jsonb_array_elements(r.players) p where p->>'id'=auth.uid()::text) then return next r; return; end if;
  if jsonb_array_length(r.players)>=3 then raise exception 'room_full'; end if;
- seat:=jsonb_array_length(r.players)+1;
+ select n into seat from generate_series(1,3) n where not exists (select 1 from jsonb_array_elements(r.players) p where (p->>'seat')::int=n) order by n limit 1;
  arr:=r.players || jsonb_build_array(jsonb_build_object('id',auth.uid(),'seat',seat,'name','Player '|| (seat+1)));
  update public.ludo_rooms set players=arr,version=version+1,updated_at=now() where code=r.code returning * into r;
  return next r;
