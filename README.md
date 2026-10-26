@@ -21,10 +21,6 @@ Real-time two-player Tic-Tac-Toe with a black and neon design. The website is pl
 
 Do steps 5 and 8 before you trust it, and tell me about any failure.
 
-## Online Ludo added
-
-The TicTacToe lobby now links to `ludo.html`. Ludo uses the same Supabase project but has its own `ludo_rooms` table. **One-time setup required:** open Supabase Dashboard → SQL Editor, paste the complete contents of `ludo-setup.sql`, and click Run. Then open `https://YOUR-USERNAME.github.io/tictactoe/ludo.html` (replace the username/repository if yours differs), create a room, and share the code with friends. The room state syncs through Supabase Realtime. This Ludo version is an early playable implementation; the state-write RPC checks room membership but is not a competitive anti-cheat engine, so don't use it for prizes or ranked play.
-
 ## Files
 
 | File | What it is |
