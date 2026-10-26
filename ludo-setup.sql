@@ -58,7 +58,7 @@ begin
  if auth.uid() is null then raise exception 'not_signed_in'; end if;
  select * into r from public.ludo_rooms where code=upper(p_code) for update;
  if not found then raise exception 'room_not_found'; end if;
- if not (r.host_id=auth.uid() or exists(select 1 from jsonb_array_elements(r.players) p where p->>'id'=auth.uid()::text)) then raise exception 'not_room_member'; end if;
+ if not (r.host_id=auth.uid() or exists(select 1 from jsonb_array_elements(r.players) as p(value) where p.value->>'id'=auth.uid()::text)) then raise exception 'not_room_member'; end if;
  if jsonb_typeof(p_state)<>'object' or length(p_state::text)>12000 then raise exception 'invalid_state'; end if;
  update public.ludo_rooms set state=p_state,version=version+1,updated_at=now() where code=r.code returning * into r;
  return next r;
@@ -71,13 +71,13 @@ begin
  select * into r from public.ludo_rooms where code=upper(p_code) for update;
  if not found then return; end if;
  if r.host_id=auth.uid() then delete from public.ludo_rooms where code=r.code;
- else update public.ludo_rooms set players=(select coalesce(jsonb_agg(p order by (p->>'seat')::int),'[]'::jsonb) from jsonb_array_elements(r.players) as p(value) where p.value->>'id'<>auth.uid()::text),version=version+1,updated_at=now() where code=r.code; end if;
+ else update public.ludo_rooms set players=(select coalesce(jsonb_agg(p.value order by (p.value->>'seat')::int),'[]'::jsonb) from jsonb_array_elements(r.players) as p(value) where p.value->>'id'<>auth.uid()::text),version=version+1,updated_at=now() where code=r.code; end if;
 end $$;
 
-grant execute on function public.ludo_create_room() to authenticated;
-grant execute on function public.ludo_join_room(text) to authenticated;
-grant execute on function public.ludo_save_state(text,jsonb) to authenticated;
-grant execute on function public.ludo_leave_room(text) to authenticated;
+revoke all on function public.ludo_create_room() from public, anon;\ngrant execute on function public.ludo_create_room() to authenticated;
+revoke all on function public.ludo_join_room(text) from public, anon;\ngrant execute on function public.ludo_join_room(text) to authenticated;
+revoke all on function public.ludo_save_state(text,jsonb) from public, anon;\ngrant execute on function public.ludo_save_state(text,jsonb) to authenticated;
+revoke all on function public.ludo_leave_room(text) from public, anon;\ngrant execute on function public.ludo_leave_room(text) to authenticated;
 do $$ begin
  alter publication supabase_realtime add table public.ludo_rooms;
 exception when duplicate_object then null;
