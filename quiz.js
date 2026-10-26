@@ -113,13 +113,13 @@ function startMini(type){
   miniContent.append(board,status);nextSeq();
  }
 }
-document.querySelectorAll("[data-mini]").forEach(b=>b.addEventListener("click",()=>startMini(b.dataset.mini)));
+document.querySelectorAll("[data-mini]").forEach(b=>b.addEventListener("click",()=>{const type=b.dataset.mini;if(["shooter","runner","bricks","zombie"].includes(type))startArcade(type);else startMini(type)}));
 $("miniGameBack").addEventListener("click",()=>{clearTimeout(miniTimer);show("home")});
 
 
 // Arcade mini-games: Space Shooter, Neon Runner, Brick Breaker, Zombie Survival
 let arcadeLoop=0, arcadeKeys={}, arcadeState=null;
-function startMini(type){
+function startArcade(type){
  clearInterval(miniTimer);cancelAnimationFrame(arcadeLoop);arcadeKeys={};
  const titles={shooter:"🚀 Space Shooter",runner:"🏃 Neon Runner",bricks:"🧱 Brick Breaker",zombie:"🧟 Zombie Survival"};
  miniBase(titles[type]||"Arcade Game","Use keyboard controls or the on-screen buttons. Beat your high score!");
@@ -137,7 +137,7 @@ function startMini(type){
  const keydown=e=>{if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","w","a","s","d","W","A","S","D"].includes(e.key)){e.preventDefault();arcadeKeys[e.key==="ArrowLeft"||e.key==="a"||e.key==="A"?"left":e.key==="ArrowRight"||e.key==="d"||e.key==="D"?"right":e.key==="ArrowUp"||e.key==="w"||e.key==="W"?"up":e.key==="ArrowDown"||e.key==="s"||e.key==="S"?"down":(type==="runner"?"jump":"fire")]=true}};
  const keyup=e=>{if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","w","a","s","d","W","A","S","D"].includes(e.key)){arcadeKeys[e.key==="ArrowLeft"||e.key==="a"||e.key==="A"?"left":e.key==="ArrowRight"||e.key==="d"||e.key==="D"?"right":e.key==="ArrowUp"||e.key==="w"||e.key==="W"?"up":e.key==="ArrowDown"||e.key==="s"||e.key==="S"?"down":"fire"]=false}};
  canvas.addEventListener("keydown",keydown);window.addEventListener("keydown",keydown);window.addEventListener("keyup",keyup);
- const finish=()=>{over=true;running=false;cancelAnimationFrame(arcadeLoop);status.textContent="Game over! Score: "+state.score;controls.append(miniButton("Play again ↻",()=>{window.removeEventListener("keydown",keydown);window.removeEventListener("keyup",keyup);startMini(type)},"btn btn-primary"))};
+ const finish=()=>{over=true;running=false;cancelAnimationFrame(arcadeLoop);status.textContent="Game over! Score: "+state.score;controls.append(miniButton("Play again ↻",()=>{window.removeEventListener("keydown",keydown);window.removeEventListener("keyup",keyup);startArcade(type)},"btn btn-primary"))};
  function draw(){
   if(!running)return;frame++;ctx.clearRect(0,0,720,420);ctx.fillStyle="#080b19";ctx.fillRect(0,0,720,420);
   for(let i=0;i<55;i++){ctx.fillStyle="#ffffff66";ctx.fillRect((i*97+frame*(i%3+1))%720,(i*61)%420,2,2)}
