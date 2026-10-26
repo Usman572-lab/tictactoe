@@ -12,7 +12,7 @@ alter table public.ludo_rooms enable row level security;
 revoke all on public.ludo_rooms from anon, authenticated;
 drop policy if exists ludo_member_read on public.ludo_rooms;
 create policy ludo_member_read on public.ludo_rooms for select to authenticated
-using (exists (select 1 from jsonb_array_elements(players) p where p->>'id' = auth.uid()::text) or host_id = auth.uid());
+using (exists (select 1 from jsonb_array_elements(players) as p(value) where p.value->>'id' = auth.uid()::text) or host_id = auth.uid());
 grant select on public.ludo_rooms to authenticated;
 
 create or replace function public.ludo_create_room()
@@ -43,9 +43,9 @@ begin
  if auth.uid() is null then raise exception 'not_signed_in'; end if;
  select * into r from public.ludo_rooms where code=upper(p_code) for update;
  if not found then raise exception 'room_not_found'; end if;
- if r.host_id=auth.uid() or exists(select 1 from jsonb_array_elements(r.players) p where p->>'id'=auth.uid()::text) then return next r; return; end if;
+ if r.host_id=auth.uid() or exists(select 1 from jsonb_array_elements(r.players) as p(value) where p.value->>'id'=auth.uid()::text) then return next r; return; end if;
  if jsonb_array_length(r.players)>=3 then raise exception 'room_full'; end if;
- select n into seat from generate_series(1,3) n where not exists (select 1 from jsonb_array_elements(r.players) p where (p->>'seat')::int=n) order by n limit 1;
+ select n into seat from generate_series(1,3) n where not exists (select 1 from jsonb_array_elements(r.players) as p(value) where (p.value->>'seat')::int=n) order by n limit 1;
  arr:=r.players || jsonb_build_array(jsonb_build_object('id',auth.uid(),'seat',seat,'name','Player '|| (seat+1)));
  update public.ludo_rooms set players=arr,version=version+1,updated_at=now() where code=r.code returning * into r;
  return next r;
@@ -71,7 +71,7 @@ begin
  select * into r from public.ludo_rooms where code=upper(p_code) for update;
  if not found then return; end if;
  if r.host_id=auth.uid() then delete from public.ludo_rooms where code=r.code;
- else update public.ludo_rooms set players=(select coalesce(jsonb_agg(p order by (p->>'seat')::int),'[]'::jsonb) from jsonb_array_elements(r.players) p where p->>'id'<>auth.uid()::text),version=version+1,updated_at=now() where code=r.code; end if;
+ else update public.ludo_rooms set players=(select coalesce(jsonb_agg(p order by (p->>'seat')::int),'[]'::jsonb) from jsonb_array_elements(r.players) as p(value) where p.value->>'id'<>auth.uid()::text),version=version+1,updated_at=now() where code=r.code; end if;
 end $$;
 
 grant execute on function public.ludo_create_room() to authenticated;
