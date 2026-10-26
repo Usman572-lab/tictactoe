@@ -90,6 +90,24 @@
           </div>
         </div>
       </div>
+
+      <section id="chatPanel" class="chat-panel" aria-label="Player chat">
+        <div class="chat-heading">
+          <div><h2>Room chat</h2><p>Talk with the player in this room</p></div>
+          <span class="chat-live"><i></i> LIVE</span>
+        </div>
+        <div id="chatMessages" class="chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div>
+        <form id="chatForm" class="chat-form">
+          <label class="sr-only" for="chatInput">Write a message</label>
+          <input id="chatInput" maxlength="500" autocomplete="off" placeholder="Write a message…" required>
+          <button class="btn btn-primary chat-send" type="submit" aria-label="Send message">Send</button>
+        </form>
+        <div class="voice-panel">
+          <div class="voice-copy"><strong>Voice chat</strong><span id="voiceStatus">Microphone off</span></div>
+          <button id="voiceBtn" class="btn btn-secondary voice-btn" type="button">🎙️ Start voice</button>
+          <audio id="remoteAudio" autoplay playsinline></audio>
+        </div>
+      </section>
     </section>
   </main>
 
